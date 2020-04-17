@@ -102,21 +102,24 @@ export default class StringResolver {
     throw new Error('Unknown configuration');
   }
 
-  buildClass(outputFile, baseCulture) {
+  writeCode(outputFile, baseCulture) {
     const strings = [];
-    this.entries.forEach(({ key, values }) => {
-      const strDetail = {
-        key,
-        value: values[baseCulture].value,
-        isTemplate: false,
-      };
-      if (this.platform === StringResolver.IOS) {
-        if (strDetail.value.match(/%(\d+\$)?@/)) {
-          strDetail.isTemplate = true;
+    [...this.entries]
+      .sort((a, b) => a.key.localeCompare(b.key))
+      .forEach(({ key, values }) => {
+        const strDetail = {
+          key,
+          value: values[baseCulture].value,
+          isTemplate: false,
+        };
+        if (this.platform === StringResolver.IOS) {
+          if (strDetail.value.match(/%(\d+\$)?@/)) {
+            strDetail.isTemplate = true;
+          }
         }
-      }
-      strings.push(strDetail);
-    });
+        strings.push(strDetail);
+      });
+
     const tpath = path.join(__dirname, '..', 'src', 'templates', `${this.platform}.handlebars`);
     const t = handlebars.compile(fs.readFileSync(tpath, 'utf8'));
     const filename = path.basename(outputFile);

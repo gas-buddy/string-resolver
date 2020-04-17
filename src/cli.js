@@ -2,10 +2,11 @@
 /* eslint-disable no-console */
 import fs from 'fs';
 import path from 'path';
+import yaml from 'js-yaml';
 import assert from 'assert';
 import minimist from 'minimist';
 import StringResolver from './index';
-import { gitFetchDirsByBranch } from './git';
+import getRepoPath from './git';
 
 const argv = minimist(process.argv.slice(2), {
   boolean: ['ios', 'android', 'help'],
@@ -34,35 +35,34 @@ const config = rawConfig.default || rawConfig.config || rawConfig;
 (async () => {
   try {
     assert(argv.ios || argv.android, 'iOS or Android format must be specified with --ios or --android');
-    assert(argv.version, 'App version must be specified with --version=x.y.z');
 
-    let finalConfig;
+    let finalConfig = config;
     if (typeof config === 'function') {
-      finalConfig = await config(argv);
-    } else {
-      finalConfig = {
-        platform: argv.ios ? StringResolver.IOS : StringResolver.ANDROID,
-        version: argv.version,
-        ...config,
-      };
+      finalConfig = await config({ yaml }, argv);
     }
+    finalConfig = {
+      platform: argv.ios ? StringResolver.IOS : StringResolver.ANDROID,
+      version: argv.version,
+      ...finalConfig,
+    };
 
-    assert(config.output, 'String output file or directory must be specified in config file');
-    assert(config.cultures, 'Must specify target cultures for the strings file in the config file');
-    assert(config.content.path, 'Content directory or git information  must be specified in config file');
+    assert(finalConfig.version, 'App version must be specified with --version=x.y.z');
+    assert(finalConfig.output, 'String output file or directory must be specified in config file');
+    assert(finalConfig.cultures, 'Must specify target cultures for the strings file in the config file');
+    assert(finalConfig.content.path, 'Content directory or git information  must be specified in config file');
 
     const resolver = new StringResolver(finalConfig);
 
     let localPath = finalConfig.content.path;
     if (finalConfig.content.repo) {
       const { content } = finalConfig;
-      gitFetchDirsByBranch(
+      getRepoPath(
         `git@github.com:${content.repo}`,
-        content.branch, {
-          [finalConfig.content.path]: '.strings-content',
-        },
+        content.branch,
+        finalConfig.content.path,
+        '.strings-content',
       );
-      localPath = '.strings-content';
+      localPath = path.join('.strings-content', finalConfig.content.path);
     }
     fs.readdirSync(localPath)
       .filter(f => f.endsWith('.json'))
@@ -71,7 +71,7 @@ const config = rawConfig.default || rawConfig.config || rawConfig;
       .map(j => resolver.addEntry(j));
 
     if (argv.code) {
-      await resolver.buildClass(finalConfig.output.code, finalConfig.cultures[0]);
+      await resolver.writeCode(finalConfig.output.code, finalConfig.cultures[0]);
     }
     resolver.writeStringsFiles(
       finalConfig.cultures,
@@ -83,7 +83,6 @@ const config = rawConfig.default || rawConfig.config || rawConfig;
     console.error(`Failed to generate file:
 ${error.message}
 `);
-    console.error(error);
     process.exit(-1);
   }
 })();
