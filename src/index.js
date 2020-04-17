@@ -41,7 +41,10 @@ export default class StringResolver {
     });
   }
 
-  addEntry({ title, baseName, lang, entries }) {
+  addEntry({ title, baseName, lang, platform, entries }) {
+    if (platform && platform !== 'all' && platform !== this.platform) {
+      return;
+    }
     entries.forEach(({ key, values, description }) => {
       values.forEach(({ iosSemver, androidSemver, value }) => {
         const finalName = baseName ? `${baseName}${key}` : key;
