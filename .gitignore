@@ -2,6 +2,7 @@
 .transpiled
 .nyc_output
 .strings-content
+LocalStrs
 
 # Wercker
 .wercker
