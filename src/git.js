@@ -48,6 +48,7 @@ function parseRow(regex: RegExp, out: string) {
 }
 
 export function git(...args: string[]) {
+  console.log(`git ${args.join(' ')}`);
   return execFileSync('git', args, { encoding: 'utf8' });
 }
 
