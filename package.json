@@ -1,6 +1,6 @@
 {
   "name": "@gasbuddy/string-resolver",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Mobile App Content Management Tool",
   "main": "build/index.js",
   "scripts": {
@@ -27,7 +27,8 @@
   "devDependencies": {
     "@babel/cli": "^7.7.5",
     "@babel/register": "^7.7.4",
-    "babel-preset-gasbuddy": "^5.6.1",
+    "acorn": ">=5.7.4",
+    "babel-preset-gasbuddy": "^6.0.0",
     "eslint-config-gasbuddy": "^5.3.0",
     "tap": "^14.10.4"
   },
@@ -36,6 +37,6 @@
     "i18n-strings-files": "^1.0.5",
     "minimist": "^1.2.5",
     "mkdirp": "^1.0.4",
-    "semver": "^7.2.1"
+    "semver": "^7.3.2"
   }
 }
