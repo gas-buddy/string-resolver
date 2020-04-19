@@ -22,9 +22,8 @@ handlebars.registerHelper('maybeComment', function maybeComment(arg, options) {
   return `${' '.repeat(numSpaces)}/// ${trimmed}\n`;
 });
 
-handlebars.registerHelper('oneline', function oneline(options) {
-  return options.fn(this).trim().replace(/\n/g, ' ').trim();
-});
+handlebars.registerHelper('oneline', options => options.fn(this).trim().replace(/\n/g, ' ').trim());
+handlebars.registerHelper('escape', variable => variable.replace(/(['"])/g, '\\$1'));
 
 export default class StringResolver {
   static IOS = 'ios';
@@ -45,8 +44,9 @@ export default class StringResolver {
     if (platform && platform !== 'all' && platform !== this.platform) {
       return;
     }
-    entries.forEach(({ key, values, description }) => {
-      values.forEach(({ iosSemver, androidSemver, value }) => {
+    entries.forEach(({ key, values, type, description, doNotTranslate }) => {
+      values.forEach((valueEntry) => {
+        const { iosSemver, androidSemver, value } = valueEntry;
         const finalName = baseName ? `${baseName}${key}` : key;
         const relevantSemver = this.platform === StringResolver.IOS ? iosSemver : androidSemver;
         if (relevantSemver && !semver.satisfies(this.version, relevantSemver)) {
@@ -55,13 +55,19 @@ export default class StringResolver {
         const existingEntry = this.entries.find(k => k.key === key) || {};
         if (!existingEntry.key) {
           existingEntry.key = finalName;
+          existingEntry.type = type;
           existingEntry.values = {};
+          existingEntry.doNotTranslate = doNotTranslate;
           this.entries.push(existingEntry);
         }
         if (existingEntry.values[lang]) {
           throw new Error(`Conflicting key ${finalName} in ${title} and ${existingEntry[lang].title}`);
         }
-        existingEntry.values[lang] = { title, value, description };
+        if (type === 'plural') {
+          existingEntry.values[lang] = { title, values: valueEntry, description };
+        } else {
+          existingEntry.values[lang] = { title, value, description };
+        }
       });
     });
   }
@@ -98,11 +104,43 @@ export default class StringResolver {
     });
   }
 
+  writeAndroidStrings(cultures, baseCulture, outputDirectory) {
+    const tpath = path.join(__dirname, '..', 'src', 'templates', 'android-strings.handlebars');
+    const t = handlebars.compile(fs.readFileSync(tpath, 'utf8'));
+    cultures.forEach((culture) => {
+      // TODO there are weird precedence rules in Android. Account for them.
+      const entries = [];
+      [...this.entries]
+        .sort((a, b) => a.key.localeCompare(b.key))
+        .forEach(({ key, type, doNotTranslate, values }) => {
+          if (!values[culture]) {
+            return;
+          }
+          const strDetail = {
+            key,
+            type,
+            doNotTranslate,
+            isPlural: type === 'plural',
+            value: values[culture].value,
+            values: values[culture].values,
+          };
+          entries.push(strDetail);
+        });
+      const strings = t({ entries });
+      const [lang, region] = culture.split('-');
+      let filename = region ? `values-${lang}-r${region.toUpperCase()}` : `values-${lang}`;
+      if (culture === baseCulture) {
+        filename = 'values';
+      }
+      fs.writeFileSync(path.join(outputDirectory, filename, 'strings.xml'), strings, 'utf8');
+    });
+  }
+
   writeStringsFiles(cultures, baseCulture, outputDirectory) {
     if (this.platform === 'ios') {
       return this.writeIOSStrings(cultures, baseCulture, outputDirectory);
     }
-    throw new Error('Unknown configuration');
+    return this.writeAndroidStrings(cultures, baseCulture, outputDirectory);
   }
 
   writeCode(outputFile, baseCulture) {
