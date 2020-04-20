@@ -3,7 +3,7 @@
            tools:ignore="MissingTranslation,ExtraTranslation">
 {{#entries}}
 {{#if isPlural}}
-    <plural name="{{key}}">
+    <plurals name="{{key}}">
       {{#if values.zero}}<item quantity="zero">{{values.zero}}</item>
       {{/if}}{{#if values.one}}<item quantity="one">{{values.one}}</item>
       {{/if}}{{#if values.two}}<item quantity="two">{{values.two}}</item>
@@ -11,7 +11,7 @@
       {{/if}}{{#if values.many}}<item quantity="many">{{values.many}}</item>
       {{/if}}{{#if values.other}}<item quantity="other">{{values.other}}</item>
       {{/if}}
-    </plural>
+    </plurals>
 {{else}}
     <string name="{{key}}"{{#if doNotTranslate}} translatable="false"{{/if}}>{{value}}</string>
 {{/if}}
