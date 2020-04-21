@@ -4,6 +4,7 @@ public class {{{className}}} {
 
     // MARK: - Static Properties
     static let bundle: Bundle = Bundle(for: {{className}}.self)
+    static var LocalizedStringSourceId: String { return NSLocalizedString("__localizedStringSourceId__", bundle: self.bundle, comment: "The git hash of the content that generated this file") }
 
     // MARK: - Localized String Properties
 {{#each strings}}

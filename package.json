@@ -1,6 +1,6 @@
 {
   "name": "@gasbuddy/string-resolver",
-  "version": "0.6.2",
+  "version": "0.7.0",
   "description": "Mobile App Content Management Tool",
   "main": "build/index.js",
   "scripts": {

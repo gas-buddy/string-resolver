@@ -30,12 +30,13 @@ export default class StringResolver {
 
   static ANDROID = 'android';
 
-  constructor({ platform, version }) {
+  constructor({ platform, version, sourceId }) {
     const cleanVersion = semver.clean(version);
     assert(cleanVersion, 'Version must be a valid semver pattern');
     Object.assign(this, {
       platform,
       version: cleanVersion,
+      sourceId,
       entries: [],
     });
   }
@@ -74,6 +75,7 @@ export default class StringResolver {
 
   writeIOSStrings(cultures, baseCulture, outputDirectory) {
     const files = {};
+    let baseCultureFile;
     cultures.forEach((culture) => {
       const stringsEntry = {};
       let lastComment;
@@ -91,12 +93,19 @@ export default class StringResolver {
         };
         lastComment = comment;
       });
+      if (culture === baseCulture) {
+        baseCultureFile = stringsEntry;
+      }
       files[`${culture === baseCulture ? 'Base' : culture}.lproj/Localizable.strings`] = stringsEntry;
     });
     Object.keys(files).forEach((outputFile) => {
       const sortedKeys = Object.keys(files[outputFile]).map(key => ({ key, sort: key.toLocaleLowerCase() }))
         .sort((a, b) => a.sort.localeCompare(b.sort));
       const finalOrder = {};
+      if (files[outputFile] === baseCultureFile) {
+        // eslint-disable-next-line no-underscore-dangle
+        finalOrder.__localizedStringSourceId__ = this.sourceId;
+      }
       sortedKeys.forEach(({ key }) => { finalOrder[key] = files[outputFile][key]; });
       const output = path.join(outputDirectory, outputFile);
       mkdirp.sync(path.dirname(output));
@@ -126,6 +135,15 @@ export default class StringResolver {
           };
           entries.push(strDetail);
         });
+      if (culture === baseCulture) {
+        // eslint-disable-next-line no-underscore-dangle
+        entries.unshift({
+          key: '__localizedStringSourceId__',
+          type: 'string',
+          doNotTranslate: true,
+          value: this.sourceId,
+        });
+      }
       const strings = t({ entries });
       const [lang, region] = culture.split('-');
       let filename = region ? `values-${lang}-r${region.toUpperCase()}` : `values-${lang}`;

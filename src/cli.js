@@ -43,6 +43,7 @@ const config = rawConfig.default || rawConfig.config || rawConfig;
     finalConfig = {
       platform: argv.ios ? StringResolver.IOS : StringResolver.ANDROID,
       version: argv.version,
+      sourceId: finalConfig.content.path,
       ...finalConfig,
     };
 
@@ -51,12 +52,10 @@ const config = rawConfig.default || rawConfig.config || rawConfig;
     assert(finalConfig.cultures, 'Must specify target cultures for the strings file in the config file');
     assert(finalConfig.content.path, 'Content directory or git information  must be specified in config file');
 
-    const resolver = new StringResolver(finalConfig);
-
     let localPath = finalConfig.content.path;
     if (finalConfig.content.repo) {
       const { content } = finalConfig;
-      getRepoPath(
+      finalConfig.sourceId = getRepoPath(
         `git@github.com:${content.repo}`,
         content.branch,
         finalConfig.content.path,
@@ -64,6 +63,9 @@ const config = rawConfig.default || rawConfig.config || rawConfig;
       );
       localPath = path.join('.strings-content', finalConfig.content.path);
     }
+
+    const resolver = new StringResolver(finalConfig);
+
     fs.readdirSync(localPath)
       .filter(f => f.endsWith('.json'))
       .map(f => fs.readFileSync(path.join(localPath, f), 'utf8'))

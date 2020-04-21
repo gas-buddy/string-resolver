@@ -17,4 +17,7 @@ export default function getRepoPath(repo, branch, subdir, workingDir) {
   }
   git(workingDir, 'checkout', branch);
   git(workingDir, 'pull');
+  const hash = git(workingDir, 'ls-tree', 'HEAD', subdir);
+  const match = hash.match(/^\S+\s+\S+\s+(\S+)\s*/);
+  return match[1];
 }
