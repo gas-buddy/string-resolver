@@ -91,7 +91,7 @@ export default class StringResolver {
 
         stringsEntry[entry.key] = {
           text: cultureValue?.value || baseValue?.value,
-          comment: (comment || lastGeneratedComment === genComment) ? undefined : comment,
+          comment: (comment || lastGeneratedComment !== genComment) ? (comment || genComment) : undefined,
         };
         if (!cultureValue?.description && !baseValue.description) {
           lastGeneratedComment = comment;
