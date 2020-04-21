@@ -78,20 +78,25 @@ export default class StringResolver {
     let baseCultureFile;
     cultures.forEach((culture) => {
       const stringsEntry = {};
-      let lastComment;
+      let lastGeneratedComment;
       this.entries.forEach((entry) => {
         const cultureValue = entry.values[culture];
         const baseValue = entry.values[baseCulture];
         if (!baseValue && !cultureValue) {
           throw new Error(`${entry.key} is missing a value in the base culture`);
         }
-        const comment = cultureValue?.description || baseValue.description
-          || `From ${cultureValue?.title || baseValue.title}`;
+
+        const comment = cultureValue?.description || baseValue.description;
+        const genComment = `From ${cultureValue?.title || baseValue.title}`;
+
         stringsEntry[entry.key] = {
           text: cultureValue?.value || baseValue?.value,
-          comment: lastComment === comment ? undefined : comment,
+          comment: (comment || lastGeneratedComment === genComment) ? undefined : comment,
         };
-        lastComment = comment;
+        if (!cultureValue?.description && !baseValue.description) {
+          lastGeneratedComment = comment;
+        }
+        lastGeneratedComment = comment;
       });
       if (culture === baseCulture) {
         baseCultureFile = stringsEntry;
