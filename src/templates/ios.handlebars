@@ -8,9 +8,7 @@ public class {{{className}}} {
     // MARK: - Localized String Properties
 {{#each strings}}
     {{#maybeComment value}}Base Value: "{{value}}"{{/maybeComment}}{{#if isTemplate}}    public class func {{key}}(_ args: String...) -> String { return String(format: NSLocalizedString("{{key}}", bundle: self.bundle, comment: ""), arguments: args) }
-
 {{else}}    public static var {{key}}: String { return NSLocalizedString("{{key}}", bundle: self.bundle, comment: "") }
-
 {{/if}}
 {{/each}}
 }
