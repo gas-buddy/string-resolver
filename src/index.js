@@ -89,14 +89,17 @@ export default class StringResolver {
         const comment = cultureValue?.description || baseValue.description;
         const genComment = `From ${cultureValue?.title || baseValue.title}`;
 
+        let finalComment;
+        if (comment && genComment !== lastGeneratedComment) {
+          finalComment = `${genComment} - ${comment}`;
+        } else if (genComment !== lastGeneratedComment) {
+          finalComment = genComment;
+        }
         stringsEntry[entry.key] = {
           text: cultureValue?.value || baseValue?.value,
-          comment: (comment || lastGeneratedComment !== genComment) ? (comment || genComment) : undefined,
+          comment: finalComment,
         };
-        if (!cultureValue?.description && !baseValue.description) {
-          lastGeneratedComment = comment;
-        }
-        lastGeneratedComment = comment;
+        lastGeneratedComment = genComment;
       });
       if (culture === baseCulture) {
         baseCultureFile = stringsEntry;
