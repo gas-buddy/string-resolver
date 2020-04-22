@@ -92,6 +92,8 @@ export default class StringResolver {
         let finalComment;
         if (comment && genComment !== lastGeneratedComment) {
           finalComment = `${genComment} - ${comment}`;
+        } else if (comment) {
+          finalComment = comment;
         } else if (genComment !== lastGeneratedComment) {
           finalComment = genComment;
         }
