@@ -78,7 +78,6 @@ export default class StringResolver {
     let baseCultureFile;
     cultures.forEach((culture) => {
       const stringsEntry = {};
-      let lastGeneratedComment;
       this.entries.forEach((entry) => {
         const cultureValue = entry.values[culture];
         const baseValue = entry.values[baseCulture];
@@ -89,19 +88,11 @@ export default class StringResolver {
         const comment = cultureValue?.description || baseValue.description;
         const genComment = `From ${cultureValue?.title || baseValue.title}`;
 
-        let finalComment;
-        if (comment && genComment !== lastGeneratedComment) {
-          finalComment = `${genComment} - ${comment}`;
-        } else if (comment) {
-          finalComment = comment;
-        } else if (genComment !== lastGeneratedComment) {
-          finalComment = genComment;
-        }
         stringsEntry[entry.key] = {
           text: cultureValue?.value || baseValue?.value,
-          comment: finalComment,
+          comment,
+          genComment,
         };
-        lastGeneratedComment = genComment;
       });
       if (culture === baseCulture) {
         baseCultureFile = stringsEntry;
@@ -116,7 +107,20 @@ export default class StringResolver {
         // eslint-disable-next-line no-underscore-dangle
         finalOrder.__localizedStringSourceId__ = this.sourceId;
       }
-      sortedKeys.forEach(({ key }) => { finalOrder[key] = files[outputFile][key]; });
+      let lastGeneratedComment;
+      sortedKeys.forEach(({ key }) => {
+        const { text, comment, genComment } = files[outputFile][key];
+        let finalComment;
+        if (comment && genComment !== lastGeneratedComment) {
+          finalComment = `${genComment} - ${comment}`;
+        } else if (comment) {
+          finalComment = comment;
+        } else if (genComment !== lastGeneratedComment) {
+          finalComment = genComment;
+        }
+        finalOrder[key] = { text, comment: finalComment };
+        lastGeneratedComment = genComment;
+      });
       const output = path.join(outputDirectory, outputFile);
       mkdirp.sync(path.dirname(output));
       iosStrings.writeFileSync(output, finalOrder, { encoding: 'UTF-8', wantsComments: true });
