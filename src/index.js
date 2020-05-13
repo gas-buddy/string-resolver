@@ -62,7 +62,10 @@ export default class StringResolver {
           this.entries.push(existingEntry);
         }
         if (existingEntry.values[lang]) {
-          throw new Error(`Conflicting key ${finalName} in ${title} and ${existingEntry[lang].title}`);
+          if (title === existingEntry.values[lang].title) {
+            throw new Error(`Key ${finalName} appears twice in ${title}`);
+          }
+          throw new Error(`Conflicting key ${finalName} in ${title} and ${existingEntry.values[lang].title}`);
         }
         if (type === 'plural') {
           existingEntry.values[lang] = { title, values: valueEntry, description };

@@ -84,7 +84,7 @@ const config = rawConfig.default || rawConfig.config || rawConfig;
     console.log(USAGE);
     console.error(`Failed to generate file:
 ${error.message}
-`);
+`, error);
     process.exit(-1);
   }
 })();
