@@ -5,8 +5,8 @@ import path from 'path';
 import yaml from 'js-yaml';
 import assert from 'assert';
 import minimist from 'minimist';
+import gitShallow from 'git-shallow';
 import StringResolver from './index';
-import getRepoPath from './git';
 
 const argv = minimist(process.argv.slice(2), {
   boolean: ['ios', 'android', 'help'],
@@ -55,12 +55,12 @@ const config = rawConfig.default || rawConfig.config || rawConfig;
     let localPath = finalConfig.content.path;
     if (finalConfig.content.repo) {
       const { content } = finalConfig;
-      finalConfig.sourceId = getRepoPath(
-        `git@github.com:${content.repo}`,
-        content.branch,
-        finalConfig.content.path,
-        '.strings-content',
-      );
+      finalConfig.sourceId = gitShallow({
+        repositoryUrl: `git@github.com:${content.repo}`,
+        branch: content.branch,
+        repositoryPath: finalConfig.content.path,
+        workingDirectory: '.strings-content',
+      });
       localPath = path.join('.strings-content', finalConfig.content.path);
     }
 

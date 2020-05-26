@@ -5,6 +5,7 @@ import semver from 'semver';
 import mkdirp from 'mkdirp';
 import handlebars from 'handlebars';
 import iosStrings from 'i18n-strings-files';
+import deepEqual from 'deep-equal';
 
 handlebars.registerHelper('maybeComment', function maybeComment(arg, options) {
   if (!arg) {
@@ -24,6 +25,59 @@ handlebars.registerHelper('maybeComment', function maybeComment(arg, options) {
 
 handlebars.registerHelper('oneline', options => options.fn(this).trim().replace(/\n/g, ' ').trim());
 handlebars.registerHelper('escape', variable => variable.replace(/(['"])/g, '\\$1'));
+
+function buildStringsByKey(entryArray) {
+  const byKey = {};
+  entryArray.forEach(({ baseName, lang, platform, entries }) => {
+    entries.forEach(({ key, values, type }) => {
+      values.forEach((valueEntry) => {
+        const { iosSemver, androidSemver, value } = valueEntry;
+        const finalName = baseName ? `${baseName}${key}` : key;
+        if (!byKey[finalName]) {
+          byKey[finalName] = {};
+        }
+        const keyInfo = byKey[finalName];
+        if (!keyInfo[platform]) {
+          keyInfo[platform] = {};
+        }
+        const platInfo = keyInfo[platform];
+        if (!platInfo[lang]) {
+          platInfo[lang] = {};
+        }
+        const platLang = platInfo[lang];
+        if (!platLang[type]) {
+          platLang[type] = [];
+        }
+        const finalValues = platLang[type];
+        finalValues.push({ iosSemver, androidSemver, value });
+      });
+    });
+  });
+  return byKey;
+}
+
+function addDiffDetails(resolver, key, details) {
+  if (!details) {
+    return;
+  }
+  for (const [platform, languages] of Object.entries(details)) {
+    for (const [language, types] of Object.entries(languages)) {
+      for (const [type, values] of Object.entries(types)) {
+        const virtualEntry = {
+          title: 'Diff',
+          lang: language,
+          platform,
+          entries: [{
+            key,
+            values,
+            type,
+          }],
+        };
+        resolver.addEntry(virtualEntry);
+      }
+    }
+  }
+}
 
 export default class StringResolver {
   static IOS = 'ios';
@@ -74,6 +128,18 @@ export default class StringResolver {
         }
       });
     });
+  }
+
+  getAllValuesForString(key) {
+    const entry = this.entries.find(str => str.key === key);
+    if (!entry) {
+      return null;
+    }
+    return Object.entries(entry.values)
+      .reduce((agg, [culture, { value }]) => {
+        agg[culture] = value;
+        return agg;
+      }, {});
   }
 
   writeIOSStrings(cultures, baseCulture, outputDirectory) {
@@ -204,5 +270,43 @@ export default class StringResolver {
     mkdirp.sync(path.dirname(outputFile));
     fs.writeFileSync(outputFile, code, 'utf8');
     return code;
+  }
+
+  /**
+   * Compute the keys that have changed (and some details) in some way between baseEntries and targetEntries.
+   */
+  static changeDetail(baseEntries, targetEntries) {
+    const beforeGrouped = buildStringsByKey(baseEntries);
+    const afterGrouped = buildStringsByKey(targetEntries);
+    const changeDetails = {};
+    Object.keys(afterGrouped).forEach((afterKey) => {
+      if (!deepEqual(afterGrouped[afterKey], beforeGrouped[afterKey])) {
+        changeDetails[afterKey] = {
+          before: beforeGrouped[afterKey] || null,
+          after: afterGrouped[afterKey],
+        };
+      }
+    });
+    // TODO perhaps look for strings that were removed from the target
+    return changeDetails;
+  }
+
+  static computeChanges(changeDetails, platform, version) {
+    const before = new StringResolver({ platform, version });
+    const after = new StringResolver({ platform, version });
+    const diff = [];
+    Object.entries(changeDetails).forEach(([stringKey, detail]) => {
+      addDiffDetails(before, stringKey, detail.before);
+      addDiffDetails(after, stringKey, detail.after);
+      const oldValue = before.getAllValuesForString(stringKey);
+      const newValue = after.getAllValuesForString(stringKey);
+      if (!deepEqual(oldValue, newValue)) {
+        diff.push({ key: stringKey, value: newValue });
+      }
+    });
+    return diff.reduce((agg, { key, value }) => {
+      agg[key] = value;
+      return agg;
+    }, {});
   }
 }
